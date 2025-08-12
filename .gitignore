@@ -1,0 +1,21 @@
+# Dependency directories
+/node_modules/
+
+# IDE and OS files
+.DS_Store
+.vscode/
+Thumbs.db
+
+# Build artifacts and compiled files
+/dist/
+/build/
+
+# Package files
+package-lock.json
+
+# Log files
+*.log
+
+# Sensitive files or local configuration
+.env
+config.json

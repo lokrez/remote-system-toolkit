@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Remote System Toolkit</title>
+    <!-- Use a modern, easy-to-read font -->
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap">
+    <!-- Load Tailwind CSS for utility-first styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for a dark, console-like theme */
+        .console-bg {
+            background-color: #1a202c; /* Dark slate gray */
+        }
+        .text-console {
+            color: #48bb78; /* Vibrant green */
+        }
+        .menu-item {
+            cursor: pointer;
+            transition: all 0.2s ease-in-out;
+            padding: 0.75rem 1.25rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+        }
+        .menu-item:hover {
+            background-color: #2d3748; /* Slightly lighter on hover */
+            transform: scale(1.02);
+        }
+        .menu-item.active {
+            background-color: #38a169; /* Active state background */
+            color: #fff;
+        }
+        /* Add a subtle animation to the menu items */
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        /* Modal-specific styles */
+        .modal {
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+    </style>
+</head>
+<body class="console-bg text-white flex items-center justify-center min-h-screen p-4">
+
+    <!-- Main Container -->
+    <div id="app" class="w-full max-w-5xl bg-gray-800 rounded-xl shadow-2xl overflow-hidden p-8 flex flex-col justify-between" style="min-height: 80vh;">
+        
+        <!-- Header -->
+        <header class="flex justify-between items-center pb-6 border-b border-gray-700 mb-6">
+            <h1 class="text-3xl font-bold text-console">Remote System Toolkit</h1>
+            <div class="flex items-center space-x-4">
+                <span id="connection-status" class="text-xs text-green-400 font-bold bg-green-900 px-3 py-1 rounded-full">
+                    Online
+                </span>
+                <span class="text-sm text-gray-400">Target IP: 192.168.1.100</span>
+            </div>
+        </header>
+        
+        <!-- Prototype Warning -->
+        <div class="bg-red-900 text-red-100 p-3 rounded-lg text-sm text-center mb-6 border-l-4 border-red-500">
+            <p class="font-bold">WARNING: This is a conceptual prototype!</p>
+            <p>This is not a production-ready or secure application. The functionality is simulated and designed for demonstration purposes only.</p>
+        </div>
+
+        <!-- Main Content Area -->
+        <div id="main-content" class="flex-grow flex flex-col items-center justify-center p-4">
+            <!-- Content will be rendered here -->
+        </div>
+
+        <!-- Footer/Status Bar -->
+        <footer class="pt-6 border-t border-gray-700 mt-6 flex justify-between items-center text-xs text-gray-400">
+            <span>Kernel: 6.8.0-35-generic</span>
+            <span>Memory: 64 GB</span>
+            <span>CPU: AMD Ryzen 7 3800X</span>
+        </footer>
+
+    </div>
+
+    <!-- Insufficient Space Modal (Hidden by default) -->
+    <div id="space-modal" class="modal fixed inset-0 z-50 hidden items-center justify-center p-4">
+        <div class="bg-gray-800 rounded-lg p-6 shadow-2xl w-full max-w-md border border-gray-700">
+            <h3 class="text-2xl font-bold text-red-500 mb-4">Insufficient Space</h3>
+            <p class="text-gray-300 mb-4">
+                You do not have enough free space on this bootable drive to create a backup partition.
+            </p>
+            <div class="bg-gray-900 p-4 rounded-lg text-sm mb-6">
+                <p class="text-gray-400">Required space: <span id="required-space-value" class="text-white font-bold"></span></p>
+                <p class="text-gray-400">Available space: <span id="available-space-value" class="text-white font-bold"></span></p>
+            </div>
+            <button onclick="closeModal()" class="w-full bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg transition-colors">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <script>
+        const mainContent = document.getElementById('main-content');
+        const connectionStatus = document.getElementById('connection-status');
+        let isOnline = true; // Global state for connection status
+        let showAllVersions = false; // Toggle state for advanced search
+        let availableSpace = 50; // Conceptual GB
+        let requiredSpace = 30; // Conceptual GB for user data
+        const spaceModal = document.getElementById('space-modal');
+        let lastAction = null; // Stores the last executed command for rollback
+
+        // URL to the dynamic mirror list (conceptual)
+        const MIRROR_LIST_URL = "https://example.com/api/distros.json";
+
+        // Hardcoded fallback data with version information for server distributions
+        const FALLBACK_DISTROS = [
+            {
+                "name": "Ubuntu Server",
+                "versions": [
+                    {"version": "24.04 LTS", "flavors": [
+                        {"name": "Minimal", "url": "https://releases.ubuntu.com/24.04/ubuntu-24.04-live-server-amd64.iso"}
+                    ]},
+                    {"version": "22.04 LTS", "flavors": [
+                        {"name": "Minimal", "url": "https://releases.ubuntu.com/22.04/ubuntu-22.04-live-server-amd64.iso"}
+                    ]}
+                ]
+            },
+            {
+                "name": "Fedora Server",
+                "versions": [
+                    {"version": "40", "flavors": [
+                        {"name": "Minimal", "url": "https://download.fedoraproject.org/pub/fedora/linux/releases/40/Server/x86_64/iso/Fedora-Server-dvd-x86_64-40-1.14.iso"}
+                    ]},
+                    {"version": "39", "flavors": [
+                        {"name": "Minimal", "url": "https://download.fedoraproject.org/pub/fedora/linux/releases/39/Server/x86_64/iso/Fedora-Server-dvd-x86_64-39-1.14.iso"}
+                    ]}
+                ]
+            },
+            {
+                "name": "Arch Linux",
+                "versions": [
+                    {"version": "Latest", "flavors": [
+                        {"name": "Latest ISO", "url": "https://mirrors.kernel.org/archlinux/iso/latest/archlinux-x86_64.iso"}
+                    ]}
+                ]
+            }
+        ];
+
+        // This function simulates the API call and real-time output
+        async function runRemoteCommand(command, args) {
+            // Log a security warning to the console
+            console.warn("SECURITY WARNING: The `runRemoteCommand` function in this prototype is highly insecure. A production-level application would require a secure, authenticated, and validated API backend. See backend_api.md for more details.");
+
+            // Save the current command to enable the revert option
+            lastAction = { command, args };
+            mainContent.innerHTML = `
+                <div class="text-center p-8 bg-gray-900 rounded-lg shadow-md max-w-3xl w-full fade-in">
+                    <h2 class="text-2xl font-bold mb-4 text-white">Executing Remote Command...</h2>
+                    <p class="text-sm text-gray-400 mb-6">
+                        Sending command to the bootable drive. This output simulates real-time feedback from the remote system.
+                    </p>
+                    <div class="bg-black text-console text-left p-4 rounded-lg font-mono text-sm overflow-auto max-h-60 mb-6" id="command-output">
+                        <span class="text-gray-500">$</span>
+                    </div>
+                    <div id="action-buttons" class="flex justify-center space-x-4">
+                        <button onclick="renderMainMenu()" class="mt-4 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                            Return to Main Menu
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            const outputElement = document.getElementById('command-output');
+            const actionButtons = document.getElementById('action-buttons');
+            const simulateOutput = (message) => {
+                outputElement.innerHTML += `<br><span class="text-white">${message}</span>`;
+                outputElement.scrollTop = outputElement.scrollHeight;
+            };
+
+            simulateOutput(`api_call(command="${command}", args=${JSON.stringify(args)})`);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            simulateOutput(`> Verifying command and permissions...`);
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            
+            if (command === 'install-os') {
+                simulateOutput(`> Downloading ISO from ${args.url}...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> Download complete. Verifying checksum...`);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                simulateOutput(`> Checksum OK. Target device identified: /dev/sdb`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> WARNING: This is a destructive operation. All data on /dev/sdb will be erased.`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                simulateOutput(`> Writing image to /dev/sdb with dd...`);
+                await new Promise(resolve => setTimeout(resolve, 5000));
+                simulateOutput(`> Installation complete. Please reboot to your new server OS.`);
+                // Add a revert button after a successful, potentially destructive command
+                actionButtons.innerHTML += `
+                    <button onclick="revertLastAction()" class="mt-4 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                        Revert Last Action
+                    </button>
+                `;
+            } else if (command === 'run-tool' || command === 'configure-network') {
+                simulateOutput(`> Executing command: ${args.tool}...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> Command completed successfully. Exiting utility.`);
+                actionButtons.innerHTML += `
+                    <button onclick="revertLastAction()" class="mt-4 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                        Revert Last Action
+                    </button>
+                `;
+            } else if (command === 'backup-data') {
+                // Logic for backing up to a separate external drive
+                simulateOutput(`> Launching external drive backup utility...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> Scanning for available storage devices...`);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                // Conceptual list of drives
+                const drives = [
+                    { path: '/dev/sdb', type: 'internal', size: '512 GB' },
+                    { path: '/dev/sdc', type: 'external', size: '1 TB', partitions: [
+                        { path: '/dev/sdc1', fs: 'NTFS', size: '500 GB', boot: true },
+                        { path: '/dev/sdc2', fs: 'ext4', size: '400 GB' },
+                        { path: '/dev/sdc3', fs: 'fat32', size: '100 GB' }
+                    ] },
+                    { path: '/dev/sdd', type: 'external', size: '256 GB', partitions: [
+                         { path: '/dev/sdd1', fs: 'ext4', size: '256 GB' }
+                    ]}
+                ];
+                simulateOutput(`> Found the following drives and partitions:`);
+                drives.forEach(drive => {
+                    simulateOutput(`>   - Drive: ${drive.path} (${drive.size}, ${drive.type})`);
+                    drive.partitions.forEach(part => {
+                        const bootWarning = part.boot ? ' (Potential boot partition detected!)' : '';
+                        simulateOutput(`>     - Partition: ${part.path} (${part.fs}, ${part.size})${bootWarning}`);
+                    });
+                });
+
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                // User would select /dev/sdc2 in a real UI
+                simulateOutput(`> User selected destination partition: /dev/sdc2`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                simulateOutput(`> No boot partitions detected on /dev/sdc2. Proceeding with backup.`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> Compressing user data from /home/user...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                simulateOutput(`> Writing compressed data to /media/sdc2/backup.tar.gz`);
+                await new Promise(resolve => setTimeout(resolve, 4000));
+                simulateOutput(`> Backup complete. Please safely eject the external device.`);
+            } else if (command === 'backup-data-self') {
+                 // Logic for backing up to the same bootable drive
+                simulateOutput(`> Launching self-backup utility...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> Verifying free space on the bootable drive: /dev/sdb...`);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                simulateOutput(`> Available free space: ${availableSpace} GB. Required space for backup: ${requiredSpace * 1.2} GB (including 20% buffer).`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                simulateOutput(`> Sufficient space detected. Proceeding with backup.`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> Compressing user data from /home/user...`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                simulateOutput(`> Writing compressed data to a new partition on /dev/sdb...`);
+                await new Promise(resolve => setTimeout(resolve, 4000));
+                simulateOutput(`> Backup complete. A new partition has been created on this drive with your data.`);
+            } else if (command === 'restore-data') {
+                simulateOutput(`> Launching data restore utility...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> Scanning for connected storage devices...`);
+                await new Promise(resolve => setTimeout(resolve, 1500));
+                simulateOutput(`> External device /dev/sdc found with backup.tar.gz.`);
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                simulateOutput(`> Verifying backup file integrity...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> Backup file OK. Proceeding to restore.`);
+                await new Promise(resolve => setTimeout(resolve, 3000));
+                simulateOutput(`> Restoring data to /home/user...`);
+                await new Promise(resolve => setTimeout(resolve, 4000));
+                simulateOutput(`> Restore complete. You may need to reboot for changes to take full effect.`);
+            } else if (command === 'revert-action' && lastAction) {
+                simulateOutput(`> Reverting last action: ${lastAction.command}...`);
+                await new Promise(resolve => setTimeout(resolve, 2000));
+                simulateOutput(`> Revert completed successfully.`);
+                lastAction = null;
+            } else {
+                simulateOutput(`> Invalid command or action failed. Please try again.`);
+            }
+
+            outputElement.innerHTML += `<br><span class="text-gray-500">$</span> <span class="text-white">Command finished.</span>`;
+            outputElement.scrollTop = outputElement.scrollHeight;
+        }
+
+        // Functions for the different menu items
+        async function renderOSInstall() {
+            const distros = await fetchDistributions();
+            let distroCards = distros.map(distro => `
+                <div class="bg-gray-700 p-6 rounded-lg shadow-lg flex flex-col justify-between items-center transition-transform hover:scale-105 fade-in cursor-pointer" onclick="renderDistroVersions('${distro.name}', '${encodeURIComponent(JSON.stringify(distro.versions))}')">
+                    <img src="https://placehold.co/128x128/38a169/ffffff?text=${distro.name.split(' ')[0]}" alt="${distro.name} logo" class="mb-4 rounded-full border-2 border-green-500">
+                    <h3 class="text-xl font-bold text-white">${distro.name}</h3>
+                </div>
+            `).join('');
+
+            mainContent.innerHTML = `
+                <div class="text-center w-full max-w-4xl">
+                    <h2 class="text-3xl font-bold text-console mb-4">OS Installation</h2>
+                    <p class="text-gray-300 mb-8">
+                        Select an operating system to install. This operation is simulated and will wipe the target disk.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                        ${distroCards}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Simulates fetching a list of OS distributions
+        async function fetchDistributions() {
+            try {
+                // This is a conceptual fetch. The actual function would call a real API.
+                const response = await new Promise(resolve => setTimeout(() => resolve({ ok: true, json: () => FALLBACK_DISTROS }), 1000));
+                if (!response.ok) {
+                    throw new Error("Network response was not ok.");
+                }
+                const distros = await response.json();
+                return distros;
+            } catch (error) {
+                console.error("Failed to fetch distributions, using fallback data:", error);
+                return FALLBACK_DISTROS;
+            }
+        }
+
+        function renderDistroVersions(name, versionsJson) {
+            const versions = JSON.parse(decodeURIComponent(versionsJson));
+            const versionCards = versions.map(version => `
+                <div class="bg-gray-700 p-4 rounded-lg shadow-lg transition-transform hover:scale-105 fade-in cursor-pointer" onclick="showInstallConfirmation('${name}', '${version.version}', '${version.flavors[0].url}')">
+                    <h4 class="text-lg font-semibold text-white mb-2">${name} - ${version.version}</h4>
+                    <p class="text-sm text-gray-400">Flavor: ${version.flavors[0].name}</p>
+                </div>
+            `).join('');
+            
+            mainContent.innerHTML = `
+                <div class="text-center w-full max-w-2xl">
+                    <h2 class="text-3xl font-bold text-console mb-4">${name} Versions</h2>
+                    <p class="text-gray-300 mb-8">
+                        Select a version to install. The URL is for a conceptual download.
+                    </p>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        ${versionCards}
+                    </div>
+                    <button onclick="renderOSInstall()" class="mt-8 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                        Back
+                    </button>
+                </div>
+            `;
+        }
+
+        function showInstallConfirmation(distro, version, url) {
+            mainContent.innerHTML = `
+                <div class="text-center p-8 bg-gray-900 rounded-lg shadow-md max-w-lg w-full fade-in">
+                    <h2 class="text-2xl font-bold text-red-500 mb-4">Confirm OS Installation</h2>
+                    <p class="text-gray-300 mb-6">
+                        You are about to install **${distro} ${version}** to the target system.
+                        <br>
+                        **This is a destructive and irreversible operation.** All data on the target disk will be erased.
+                    </p>
+                    <div class="bg-gray-800 p-4 rounded-lg text-left text-sm text-gray-400 mb-6">
+                        <p><strong>URL:</strong> <span class="text-green-400 break-all">${url}</span></p>
+                        <p><strong>Target Disk:</strong> <span class="text-green-400">/dev/sdb</span></p>
+                    </div>
+                    <div class="flex justify-center space-x-4">
+                        <button onclick="runRemoteCommand('install-os', { distro: '${distro}', version: '${version}', url: '${url}' })" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                            Confirm and Install
+                        </button>
+                        <button onclick="renderOSInstall()" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function renderSystemRecovery() {
+            mainContent.innerHTML = `
+                <div class="text-center w-full max-w-2xl">
+                    <h2 class="text-3xl font-bold text-console mb-4">System Recovery</h2>
+                    <p class="text-gray-300 mb-8">
+                        This section provides tools for advanced system recovery tasks.
+                    </p>
+                    <div class="grid grid-cols-1 gap-6">
+                        <div class="bg-gray-700 menu-item flex items-center justify-between fade-in" onclick="runRemoteCommand('run-tool', { tool: 'diskpart' })">
+                            <span>Disk Partitioning Utility</span>
+                            <span class="text-sm text-gray-400 font-normal">(\`diskpart\`)</span>
+                        </div>
+                        <div class="bg-gray-700 menu-item flex items-center justify-between fade-in" onclick="runRemoteCommand('run-tool', { tool: 'fsck' })">
+                            <span>File System Check</span>
+                            <span class="text-sm text-gray-400 font-normal">(\`fsck\`)</span>
+                        </div>
+                        <div class="bg-gray-700 menu-item flex items-center justify-between fade-in" onclick="renderMainMenu()">
+                            <span>Back to Main Menu</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderDataManagement() {
+            mainContent.innerHTML = `
+                <div class="text-center w-full max-w-2xl">
+                    <h2 class="text-3xl font-bold text-console mb-4">Data Management</h2>
+                    <p class="text-gray-300 mb-8">
+                        Backup and restore data to prevent loss.
+                    </p>
+                    <div class="grid grid-cols-1 gap-6">
+                        <div class="bg-gray-700 menu-item flex items-center justify-between fade-in" onclick="showBackupConfirmation('external')">
+                            <span>Backup to External Drive</span>
+                        </div>
+                        <div class="bg-gray-700 menu-item flex items-center justify-between fade-in" onclick="showBackupConfirmation('self')">
+                            <span>Backup to a New Partition</span>
+                            <span class="text-xs text-red-400 font-normal">Requires free space on this drive</span>
+                        </div>
+                        <div class="bg-gray-700 menu-item flex items-center justify-between fade-in" onclick="runRemoteCommand('restore-data')">
+                            <span>Restore Data</span>
+                        </div>
+                        <div class="bg-gray-700 menu-item flex items-center justify-between fade-in" onclick="renderMainMenu()">
+                            <span>Back to Main Menu</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function showBackupConfirmation(type) {
+            let message = '';
+            let command = '';
+            let action = '';
+
+            if (type === 'external') {
+                message = "You are about to back up user data to a connected external drive. Please ensure a drive is connected and has enough free space.";
+                command = "backup-data";
+                action = "Confirm and Backup to External Drive";
+            } else if (type === 'self') {
+                if (availableSpace < requiredSpace) {
+                    showModal();
+                    return;
+                }
+                message = "You are about to back up user data to a new partition on this same live bootable drive. This will partition the free space on this drive.";
+                command = "backup-data-self";
+                action = "Confirm and Backup to New Partition";
+            }
+
+            mainContent.innerHTML = `
+                <div class="text-center p-8 bg-gray-900 rounded-lg shadow-md max-w-lg w-full fade-in">
+                    <h2 class="text-2xl font-bold text-yellow-400 mb-4">Confirm Data Backup</h2>
+                    <p class="text-gray-300 mb-6">${message}</p>
+                    <div class="flex justify-center space-x-4">
+                        <button onclick="runRemoteCommand('${command}', {})" class="bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                            ${action}
+                        </button>
+                        <button onclick="renderDataManagement()" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function revertLastAction() {
+            if (lastAction) {
+                mainContent.innerHTML = `
+                    <div class="text-center p-8 bg-gray-900 rounded-lg shadow-md max-w-lg w-full fade-in">
+                        <h2 class="text-2xl font-bold text-red-500 mb-4">Confirm Rollback</h2>
+                        <p class="text-gray-300 mb-6">
+                            Are you sure you want to revert the last action?
+                            <br>
+                            Action to revert: <span class="text-white font-mono">${lastAction.command}</span>
+                        </p>
+                        <div class="flex justify-center space-x-4">
+                            <button onclick="runRemoteCommand('revert-action', {})" class="bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                                Yes, Revert
+                            </button>
+                            <button onclick="renderMainMenu()" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                                No, Cancel
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                alert("No previous action to revert.");
+            }
+        }
+        
+        function showModal() {
+            document.getElementById('required-space-value').textContent = `${requiredSpace * 1.2} GB`;
+            document.getElementById('available-space-value').textContent = `${availableSpace} GB`;
+            spaceModal.classList.remove('hidden');
+            spaceModal.classList.add('flex');
+        }
+
+        function closeModal() {
+            spaceModal.classList.remove('flex');
+            spaceModal.classList.add('hidden');
+        }
+
+        function renderMainMenu() {
+            mainContent.innerHTML = `
+                <div class="text-center w-full max-w-2xl">
+                    <h2 class="text-3xl font-bold text-console mb-4">Main Menu</h2>
+                    <p class="text-gray-300 mb-8">
+                        Select a task to perform on the remote system.
+                    </p>
+                    <div class="grid grid-cols-1 gap-6">
+                        <div class="bg-gray-700 menu-item flex justify-between items-center fade-in" onclick="renderOSInstall()">
+                            <span>OS Installation</span>
+                            <span class="text-sm text-gray-400 font-normal">Re-install or change OS</span>
+                        </div>
+                        <div class="bg-gray-700 menu-item flex justify-between items-center fade-in" onclick="renderSystemRecovery()">
+                            <span>System Recovery</span>
+                            <span class="text-sm text-gray-400 font-normal">Partitioning, file system checks, etc.</span>
+                        </div>
+                        <div class="bg-gray-700 menu-item flex justify-between items-center fade-in" onclick="renderDataManagement()">
+                            <span>Data Management</span>
+                            <span class="text-sm text-gray-400 font-normal">Backup and restore data</span>
+                        </div>
+                        <div class="bg-gray-700 menu-item flex justify-between items-center fade-in" onclick="runRemoteCommand('rollback', {})">
+                            <span>Rollback Last Operation</span>
+                            <span class="text-sm text-gray-400 font-normal">Revert a change (simulated)</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.onload = () => {
+            renderMainMenu();
+        };
+
+        // Initialize the first view
+        renderMainMenu();
+
+    </script>
+</body>
+</html>
