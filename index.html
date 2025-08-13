@@ -150,7 +150,7 @@
             }
         ];
 
-        // This function simulates the API call and real-time output
+        // This function makes a real API call to the backend
         async function runRemoteCommand(command, args) {
             // Log a security warning to the console
             console.warn("SECURITY WARNING: The `runRemoteCommand` function in this prototype is highly insecure. A production-level application would require a secure, authenticated, and validated API backend. See backend_api.md for more details.");
@@ -185,119 +185,83 @@
             simulateOutput(`> Verifying command and permissions...`);
             await new Promise(resolve => setTimeout(resolve, 1500));
             
-            if (command === 'install-os') {
-                simulateOutput(`> Downloading ISO from ${args.url}...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> Download complete. Verifying checksum...`);
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                simulateOutput(`> Checksum OK. Target device identified: /dev/sdb`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> WARNING: This is a destructive operation. All data on /dev/sdb will be erased.`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                simulateOutput(`> Writing image to /dev/sdb with dd...`);
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                simulateOutput(`> Installation complete. Please reboot to your new server OS.`);
-                // Add a revert button after a successful, potentially destructive command
-                actionButtons.innerHTML += `
-                    <button onclick="revertLastAction()" class="mt-4 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                        Revert Last Action
-                    </button>
-                `;
-            } else if (command === 'run-tool' || command === 'configure-network') {
-                simulateOutput(`> Executing command: ${args.tool}...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> Command completed successfully. Exiting utility.`);
-                actionButtons.innerHTML += `
-                    <button onclick="revertLastAction()" class="mt-4 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                        Revert Last Action
-                    </button>
-                `;
-            } else if (command === 'backup-data-self') {
-                 // Logic for backing up to the same bootable drive
-                simulateOutput(`> Launching self-backup utility...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> Verifying free space on the bootable drive: /dev/sdb...`);
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                simulateOutput(`> Available free space: ${availableSpace} GB. Required space for backup: ${requiredSpace * 1.2} GB (including 20% buffer).`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                simulateOutput(`> Sufficient space detected. Proceeding with backup.`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> Compressing user data from /home/user...`);
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                simulateOutput(`> Writing compressed data to a new partition on /dev/sdb...`);
-                await new Promise(resolve => setTimeout(resolve, 4000));
-                simulateOutput(`> Backup complete. A new partition has been created on this drive with your data.`);
-            } else if (command === 'backup-data') {
-                // Logic for backing up to a separate external drive
-                simulateOutput(`> Launching external drive backup utility...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> Scanning for available storage devices...`);
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                simulateOutput(`> Found the following drives and partitions:`);
-                const drives = [
-                    { path: '/dev/sdb', type: 'internal', size: '512 GB' },
-                    { path: '/dev/sdc', type: 'external', size: '1 TB', partitions: [
-                    { path: '/dev/sdc1', fs: 'NTFS', size: '500 GB', boot: true },
-                        { path: '/dev/sdc2', fs: 'ext4', size: '400 GB' },
-                        { path: '/dev/sdc3', fs: 'fat32', size: '100 GB' }
-                    ] },
-                    { path: '/dev/sdd', type: 'external', size: '256 GB', partitions: [
-                         { path: '/dev/sdd1', fs: 'ext4', size: '256 GB' }
-                    ]}
-                ];
-                drives.forEach(drive => {
-                    simulateOutput(`>   - Drive: ${drive.path} (${drive.size}, ${drive.type})`);
-                    drive.partitions.forEach(part => {
-                        const bootWarning = part.boot ? ' (Potential boot partition detected!)' : '';
-                        simulateOutput(`>     - Partition: ${part.path} (${part.fs}, ${part.size})${bootWarning}`);
-                    });
-                });
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> User selected destination partition: /dev/sdc2`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                simulateOutput(`> No boot partitions detected on /dev/sdc2. Proceeding with backup.`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> Compressing user data from /home/user...`);
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                simulateOutput(`> Writing compressed data to /media/sdc2/backup.tar.gz`);
-                await new Promise(resolve => setTimeout(resolve, 4000));
-                simulateOutput(`> Backup complete. Please safely eject the external device.`);
-            } else if (command === 'restore-data') {
-                simulateOutput(`> Launching data restore utility...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> Scanning for connected storage devices...`);
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                simulateOutput(`> External device detected with backup file: /media/sdc/backup.tar.gz`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                simulateOutput(`> WARNING: This will overwrite data on the internal drive.`);
-                await new Promise(resolve => setTimeout(resolve, 1000));
-                simulateOutput(`> Extracting backup.tar.gz to /home/user...`);
-                await new Promise(resolve => setTimeout(resolve, 5000));
-                simulateOutput(`> Restore complete.`);
-            } else if (command === 'revert-last-action') {
-                simulateOutput(`> Reverting last action: ${args.original_command}...`);
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                simulateOutput(`> Reading from snapshot before ${args.original_command}...`);
-                await new Promise(resolve => setTimeout(resolve, 1500));
-                simulateOutput(`> Reverting changes to the system state...`);
-                await new Promise(resolve => setTimeout(resolve, 3000));
-                simulateOutput(`> Revert complete. The system has been restored to its previous state.`);
+            // --- NEW: Handle API calls for each command ---
+            let endpoint = '';
+            let method = 'POST';
+            let payload = {};
+
+            switch (command) {
+                case 'install-os':
+                    endpoint = '/api/v1/install';
+                    payload = { url: args.url, device: args.device };
+                    break;
+                case 'backup-data-self':
+                    endpoint = '/api/v1/backup/self';
+                    payload = { destination: args.device };
+                    break;
+                case 'backup-data':
+                    endpoint = '/api/v1/backup/external';
+                    payload = { source: '/', destination: args.device }; // Conceptual source is the root
+                    break;
+                case 'restore-data':
+                    endpoint = '/api/v1/restore';
+                    payload = { source: args.source, destination: args.destination };
+                    break;
+                case 'filesystem-check':
+                    endpoint = '/api/v1/filesystem/check';
+                    payload = { device: args.device };
+                    break;
+                case 'rollback':
+                    endpoint = '/api/v1/rollback';
+                    payload = { job_id: lastAction.job_id }; // Conceptual: rollback would need a job_id
+                    break;
+                default:
+                    simulateOutput(`> Error: Unknown command '${command}'.`);
+                    return;
             }
+
+            try {
+                const response = await fetch(`http://127.0.0.1:5000${endpoint}`, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const result = await response.json();
+                if (response.ok) {
+                    simulateOutput(`> API call successful. Job ID: ${result.job_id}`);
+                    simulateOutput(`> Starting a conceptual WebSocket connection to stream output...`);
+                    // In a real app, this would open a WebSocket to /ws/status/${result.job_id}
+                } else {
+                    simulateOutput(`> Error: API returned a status code of ${response.status}`);
+                    simulateOutput(`> Message: ${result.error || 'No error message provided.'}`);
+                }
+            } catch (error) {
+                simulateOutput(`> Fatal error during API call: ${error}`);
+            }
+
+            // Fallback simulation logic for demonstration purposes
+            simulateOutput(`> This is a simulation. In a real application, the backend would now be processing the request.`);
+            
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            // Add a revert button after a successful, potentially destructive command
+            actionButtons.innerHTML += `
+                <button onclick="revertLastAction()" class="mt-4 bg-red-600 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                    Revert Last Action
+                </button>
+            `;
         }
 
-        // Reverts the last executed action
         function revertLastAction() {
             if (lastAction) {
-                // Pass the original command as an argument to the revert command
-                runRemoteCommand('revert-last-action', { original_command: lastAction.command, ...lastAction.args });
-                lastAction = null; // Clear the last action after reverting
+                runRemoteCommand('revert-last-action', { original_command: lastAction.command, job_id: lastAction.job_id });
+            } else {
+                alert("No previous action to revert.");
             }
         }
-
+        
         // Simulates fetching a list of OS distributions from the backend
         async function fetchDistributions() {
             try {
-                // Make a real fetch request to the backend API
                 const response = await fetch(MIRROR_LIST_URL);
                 if (response.ok) {
                     const distros = await response.json();
@@ -314,7 +278,6 @@
         
         async function fetchStorageDevices() {
             try {
-                // Make a real fetch request to the storage API
                 const response = await fetch(STORAGE_API_URL);
                 if (response.ok) {
                     const devices = await response.json();
@@ -330,7 +293,6 @@
         }
         
         function renderFlavorMenu(distroName, versionName) {
-            // Find the correct distro object based on the name and version passed
             const distro = FALLBACK_DISTROS.find(d => d.name === distroName);
             const versionData = distro.versions.find(v => v.version === versionName);
 
@@ -338,12 +300,10 @@
                 renderDownloadMenu();
                 return;
             }
-
             let flavorButtons = '';
             versionData.flavors.forEach((flavor) => {
-                // Now passing a simple URL string to the function
                 flavorButtons += `
-                    <button onclick="installOS('${flavor.url}')" class="menu-item text-white bg-gray-700 hover:bg-gray-600 transition-colors fade-in">
+                    <button onclick="showInstallConfirmation('${distroName}', '${versionName}', '${flavor.url}')" class="menu-item text-white bg-gray-700 hover:bg-gray-600 transition-colors fade-in">
                         ${flavor.name}
                     </button>
                 `;
@@ -376,9 +336,7 @@
             }
 
             let distroButtons = '';
-            // Filter for the latest versions if the advanced search is not active
             const filteredDistros = showAllVersions ? distros : distros.map(distro => {
-                // Find the latest version
                 const latestVersion = distro.versions[0];
                 return { ...distro, versions: [latestVersion] };
             });
@@ -421,7 +379,7 @@
                 </style>
             `;
         }
-        
+
         async function renderRecoveryMenu() {
             const devices = await fetchStorageDevices();
             const deviceCards = devices.map(device => `
@@ -450,25 +408,6 @@
             renderDownloadMenu();
         }
         
-        // Simulates a check to see if the bootable drive has enough space for a backup
-        function checkDeviceSpace() {
-            // This would be a real API call in a production environment
-            const buffer = requiredSpace * 0.2;
-            return availableSpace > requiredSpace + buffer;
-        }
-
-        function showInsufficientSpaceMessage() {
-            document.getElementById('required-space-value').innerText = `${(requiredSpace * 1.2).toFixed(1)} GB`;
-            document.getElementById('available-space-value').innerText = `${availableSpace} GB`;
-            spaceModal.classList.add('flex');
-            spaceModal.classList.remove('hidden');
-        }
-
-        function closeModal() {
-            spaceModal.classList.add('hidden');
-            spaceModal.classList.remove('flex');
-        }
-
         async function renderBackupMenu() {
             const devices = await fetchStorageDevices();
             const hasSpace = checkDeviceSpace();
@@ -508,6 +447,58 @@
                     </button>
                 </div>
             `;
+        }
+        
+        async function showInstallConfirmation(distro, version, url) {
+            const devices = await fetchStorageDevices();
+            const deviceOptions = devices.map(device => `
+                <option value="${device.name}" ${!device.is_removable ? 'disabled' : ''}>
+                    ${device.name} - ${device.description} ${!device.is_removable ? '(Internal - Cannot Install Here)' : ''}
+                </option>
+            `).join('');
+
+            mainContent.innerHTML = `
+                <div class="text-center p-8 bg-gray-900 rounded-lg shadow-md max-w-lg w-full fade-in">
+                    <h2 class="text-2xl font-bold text-red-500 mb-4">Confirm OS Installation</h2>
+                    <p class="text-gray-300 mb-6">
+                        You are about to install **${distro} ${version}**. Please select the target device.
+                        <br>
+                        **This is a destructive and irreversible operation.**
+                    </p>
+                    <div class="bg-gray-800 p-4 rounded-lg text-left text-sm text-gray-400 mb-6">
+                        <p><strong>URL:</strong> <span class="text-green-400 break-all">${url}</span></p>
+                        <label for="install-device" class="block mt-4 mb-2"><strong>Select Target Device:</strong></label>
+                        <select id="install-device" class="w-full bg-gray-700 text-white p-2 rounded-md">
+                            ${deviceOptions}
+                        </select>
+                    </div>
+                    <div class="flex justify-center space-x-4">
+                        <button id="confirm-install-button" class="bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                            Confirm and Install
+                        </button>
+                        <button onclick="renderDownloadMenu()" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            const installDeviceSelect = document.getElementById('install-device');
+            const confirmButton = document.getElementById('confirm-install-button');
+
+            // Find the first valid removable device and select it by default
+            const firstRemovableDevice = devices.find(device => device.is_removable);
+            if (firstRemovableDevice) {
+                installDeviceSelect.value = firstRemovableDevice.name;
+                confirmButton.disabled = false;
+                confirmButton.onclick = () => {
+                    const selectedDevice = installDeviceSelect.value;
+                    runRemoteCommand('install-os', { distro: distro, version: version, url: url, device: selectedDevice });
+                };
+            } else {
+                confirmButton.disabled = true;
+                confirmButton.textContent = "No Removable Devices Found";
+            }
         }
         
         function renderMainMenu() {
