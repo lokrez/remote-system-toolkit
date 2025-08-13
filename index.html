@@ -253,7 +253,7 @@
 
         function revertLastAction() {
             if (lastAction) {
-                runRemoteCommand('revert-last-action', { original_command: lastAction.command, job_id: lastAction.job_id });
+                runRemoteCommand('revert-action', { original_command: lastAction.command, job_id: lastAction.job_id });
             } else {
                 alert("No previous action to revert.");
             }
@@ -379,7 +379,7 @@
                 </style>
             `;
         }
-
+        
         async function renderRecoveryMenu() {
             const devices = await fetchStorageDevices();
             const deviceCards = devices.map(device => `
@@ -528,11 +528,3 @@
     </script>
 </body>
 </html>
-```
-
-### Git Commit
-To commit your changes to the repository, you can use the following commands:
-```bash
-git add .
-git commit -m "Updated index.html to use the /api/v1/storage endpoint for dynamic device lists"
-
