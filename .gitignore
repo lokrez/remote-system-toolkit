@@ -6,9 +6,13 @@
 .vscode/
 Thumbs.db
 
-# Build artifacts and compiled files
+# Build artifacts and temporary files
 /dist/
 /build/
+/iso-mount/
+/iso_work/
+*.iso
+*.img
 
 # Package files
 package-lock.json
@@ -19,3 +23,4 @@ package-lock.json
 # Sensitive files or local configuration
 .env
 config.json
+
