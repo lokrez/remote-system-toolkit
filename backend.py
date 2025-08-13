@@ -42,6 +42,28 @@ FALLBACK_DISTROS = [
     }
 ]
 
+FALLBACK_DEVICES = [
+    {"name": "/dev/sda", "description": "512 GB M.2 SSD (System)", "is_removable": False},
+    {"name": "/dev/sdb", "description": "2 TB M.2 SSD (Data)", "is_removable": False},
+    {"name": "/dev/sdc", "description": "8 GB USB Drive", "is_removable": True}
+]
+
+# --- Helper Functions ---
+def fetch_distro_list():
+    """Simulates fetching the latest distro list from a remote server."""
+    # In a real app, this would use a library like `requests`
+    # and include robust error handling, a timeout, and a trusted certificate check.
+    # We'll just return the fallback list for now.
+    return FALLBACK_DISTROS
+
+def fetch_storage_devices():
+    """
+    Simulates scanning the system for all connected block devices.
+    In a production version, this would call a system command like `lsblk`
+    and parse the output into a structured format.
+    """
+    return FALLBACK_DEVICES
+
 # --- API Endpoints ---
 @app.route('/api/v1/distros', methods=['GET'])
 def get_distros():
@@ -49,9 +71,19 @@ def get_distros():
     GET /api/v1/distros
     Returns a list of available OS distributions in JSON format.
     """
-    # This simulates fetching the list from a remote source or a local file.
-    # For now, it simply returns the hardcoded list.
-    return jsonify(FALLBACK_DISTROS)
+    return jsonify(fetch_distro_list())
+
+@app.route('/api/v1/storage', methods=['GET'])
+def get_storage():
+    """
+    GET /api/v1/storage
+    Returns a list of all connected storage devices.
+    """
+    return jsonify(fetch_storage_devices())
+
+@app.route('/')
+def index():
+    return "Remote System Toolkit Backend is running."
 
 if __name__ == '__main__':
     # This will run the server on all network interfaces on port 5000.
