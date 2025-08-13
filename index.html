@@ -113,6 +113,9 @@
 
         // URL to the dynamic mirror list
         const MIRROR_LIST_URL = "http://127.0.0.1:5000/api/v1/distros";
+        // URL for the storage devices API
+        const STORAGE_API_URL = "http://127.0.0.1:5000/api/v1/storage";
+
         // Hardcoded fallback data with version information for server distributions
         const FALLBACK_DISTROS = [
             {
@@ -308,7 +311,24 @@
                 return FALLBACK_DISTROS;
             }
         }
-
+        
+        async function fetchStorageDevices() {
+            try {
+                // Make a real fetch request to the storage API
+                const response = await fetch(STORAGE_API_URL);
+                if (response.ok) {
+                    const devices = await response.json();
+                    return devices;
+                } else {
+                    console.error("Failed to fetch storage devices. Using fallback data.");
+                    return [];
+                }
+            } catch (error) {
+                console.error("Error fetching storage devices:", error);
+                return [];
+            }
+        }
+        
         function renderFlavorMenu(distroName, versionName) {
             // Find the correct distro object based on the name and version passed
             const distro = FALLBACK_DISTROS.find(d => d.name === distroName);
@@ -401,28 +421,33 @@
                 </style>
             `;
         }
+        
+        async function renderRecoveryMenu() {
+            const devices = await fetchStorageDevices();
+            const deviceCards = devices.map(device => `
+                <div class="bg-gray-700 p-4 rounded-lg shadow-lg flex justify-between items-center transition-transform hover:scale-105 fade-in cursor-pointer">
+                    <div class="flex flex-col items-start">
+                        <h4 class="text-lg font-semibold text-white">${device.name}</h4>
+                        <p class="text-sm text-gray-400">${device.description}</p>
+                    </div>
+                    ${!device.is_removable ? '<span class="text-xs text-red-400 font-bold bg-red-900 px-2 py-1 rounded-full">Internal</span>' : ''}
+                </div>
+            `).join('');
 
-        function renderRecoveryMenu() {
-             mainContent.innerHTML = `
+            mainContent.innerHTML = `
                 <h2 class="text-2xl font-bold mb-6 text-white text-center fade-in">Server Recovery Utilities</h2>
                 <div class="flex flex-col space-y-4 w-full max-w-sm">
-                    <button onclick="runRemoteCommand('configure-network', {tool: 'netplan'})" class="menu-item text-white bg-gray-700 hover:bg-gray-600 transition-colors fade-in">
-                        Configure Network Interfaces
-                    </button>
-                    <button onclick="runRemoteCommand('run-tool', {tool: 'fdisk'})" class="menu-item text-white bg-gray-700 hover:bg-gray-600 transition-colors fade-in">
-                        Manage Partitions (fdisk)
-                    </button>
-                    <button onclick="runRemoteCommand('run-tool', {tool: 'fsck'})" class="menu-item text-white bg-gray-700 hover:bg-gray-600 transition-colors fade-in">
-                        File System Check (fsck)
-                    </button>
-                    <button onclick="runRemoteCommand('run-tool', {tool: 'testdisk'})" class="menu-item text-white bg-gray-700 hover:bg-gray-600 transition-colors fade-in">
-                        Data Rescue (TestDisk)
-                    </button>
+                    ${deviceCards}
                     <button onclick="renderMainMenu()" class="menu-item text-white bg-gray-700 hover:bg-gray-600 transition-colors fade-in">
                         Back to Main Menu
                     </button>
                 </div>
             `;
+        }
+
+        function toggleShowAllVersions() {
+            showAllVersions = !showAllVersions;
+            renderDownloadMenu();
         }
         
         // Simulates a check to see if the bootable drive has enough space for a backup
@@ -444,16 +469,26 @@
             spaceModal.classList.remove('flex');
         }
 
-        function renderBackupMenu() {
+        async function renderBackupMenu() {
+            const devices = await fetchStorageDevices();
             const hasSpace = checkDeviceSpace();
             const selfBackupButtonClass = hasSpace
-                ?
-                'menu-item text-white bg-green-600 hover:bg-green-500 transition-colors fade-in'
+                ? 'menu-item text-white bg-green-600 hover:bg-green-500 transition-colors fade-in'
                 : 'menu-item text-gray-400 bg-gray-700 hover:bg-gray-700 cursor-not-allowed fade-in';
             const selfBackupButtonOnClick = hasSpace
-                ?
-                "runRemoteCommand('backup-data-self')"
+                ? "runRemoteCommand('backup-data-self')"
                 : "showInsufficientSpaceMessage()";
+
+            let deviceCards = devices.map(device => `
+                 <div class="bg-gray-700 p-4 rounded-lg shadow-lg flex justify-between items-center transition-transform hover:scale-105 fade-in cursor-pointer">
+                    <div class="flex flex-col items-start">
+                        <h4 class="text-lg font-semibold text-white">${device.name}</h4>
+                        <p class="text-sm text-gray-400">${device.description}</p>
+                    </div>
+                    ${!device.is_removable ? '<span class="text-xs text-red-400 font-bold bg-red-900 px-2 py-1 rounded-full">Internal</span>' : ''}
+                </div>
+            `).join('');
+
             mainContent.innerHTML = `
                 <h2 class="text-2xl font-bold mb-6 text-white text-center fade-in">Data Backup & Restore</h2>
                 <div class="flex flex-col space-y-4 w-full max-w-sm">
@@ -502,3 +537,11 @@
     </script>
 </body>
 </html>
+```
+
+### Git Commit
+To commit your changes to the repository, you can use the following commands:
+```bash
+git add .
+git commit -m "Updated index.html to use the /api/v1/storage endpoint for dynamic device lists"
+
