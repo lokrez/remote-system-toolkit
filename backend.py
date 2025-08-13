@@ -2,7 +2,9 @@
 
 import json
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
+import time
+import random
 
 app = Flask(__name__)
 
@@ -51,9 +53,6 @@ FALLBACK_DEVICES = [
 # --- Helper Functions ---
 def fetch_distro_list():
     """Simulates fetching the latest distro list from a remote server."""
-    # In a real app, this would use a library like `requests`
-    # and include robust error handling, a timeout, and a trusted certificate check.
-    # We'll just return the fallback list for now.
     return FALLBACK_DISTROS
 
 def fetch_storage_devices():
@@ -63,6 +62,15 @@ def fetch_storage_devices():
     and parse the output into a structured format.
     """
     return FALLBACK_DEVICES
+
+def run_install_script(distro_url, target_device):
+    """
+    Placeholder for the actual installation script logic.
+    In a real application, this would call a secure shell script
+    and handle the output.
+    """
+    print(f"Simulating installation of {distro_url} on {target_device}")
+    return {"status": "started", "job_id": f"job-{random.randint(1000, 9999)}"}
 
 # --- API Endpoints ---
 @app.route('/api/v1/distros', methods=['GET'])
@@ -81,6 +89,28 @@ def get_storage():
     """
     return jsonify(fetch_storage_devices())
 
+@app.route('/api/v1/install', methods=['POST'])
+def install_os():
+    """
+    POST /api/v1/install
+    Handles a request to install an OS.
+    The request body is expected to be a JSON object with 'url' and 'device'.
+    """
+    data = request.get_json()
+    if not data or 'url' not in data or 'device' not in data:
+        return jsonify({"error": "Missing required parameters: 'url' and 'device'."}), 400
+
+    distro_url = data['url']
+    target_device = data['device']
+
+    # In a real application, you would perform extensive input validation here
+    # to prevent command injection before calling the shell script.
+    
+    # Run the installation script in a non-blocking way
+    result = run_install_script(distro_url, target_device)
+
+    return jsonify(result), 202 # Return 202 Accepted, as the job is now running in the background
+
 @app.route('/')
 def index():
     return "Remote System Toolkit Backend is running."
@@ -89,4 +119,5 @@ if __name__ == '__main__':
     # This will run the server on all network interfaces on port 5000.
     # The web UI can then connect to this address.
     app.run(host='0.0.0.0', port=5000)
+
 
