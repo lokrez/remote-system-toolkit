@@ -5,6 +5,9 @@ import os
 from flask import Flask, jsonify, request
 import time
 import random
+import subprocess
+from threading import Thread
+import queue
 
 app = Flask(__name__)
 
@@ -72,6 +75,34 @@ def run_install_script(distro_url, target_device):
     print(f"Simulating installation of {distro_url} on {target_device}")
     return {"status": "started", "job_id": f"job-{random.randint(1000, 9999)}"}
 
+def run_backup_script(source, destination):
+    """
+    Placeholder for the actual backup script logic.
+    """
+    print(f"Simulating backup from {source} to {destination}")
+    return {"status": "started", "job_id": f"job-{random.randint(1000, 9999)}"}
+
+def run_restore_script(source, destination):
+    """
+    Placeholder for the actual restore script logic.
+    """
+    print(f"Simulating restore from {source} to {destination}")
+    return {"status": "started", "job_id": f"job-{random.randint(1000, 9999)}"}
+
+def run_filesystem_check_script(device):
+    """
+    Placeholder for the actual filesystem check script logic.
+    """
+    print(f"Simulating filesystem check on {device}")
+    return {"status": "started", "job_id": f"job-{random.randint(1000, 9999)}"}
+
+def run_rollback_script():
+    """
+    Placeholder for the actual rollback script logic.
+    """
+    print("Simulating rollback of last action.")
+    return {"status": "started", "job_id": f"job-{random.randint(1000, 9999)}"}
+
 # --- API Endpoints ---
 @app.route('/api/v1/distros', methods=['GET'])
 def get_distros():
@@ -102,14 +133,84 @@ def install_os():
 
     distro_url = data['url']
     target_device = data['device']
-
+    
     # In a real application, you would perform extensive input validation here
     # to prevent command injection before calling the shell script.
     
-    # Run the installation script in a non-blocking way
     result = run_install_script(distro_url, target_device)
 
-    return jsonify(result), 202 # Return 202 Accepted, as the job is now running in the background
+    return jsonify(result), 202
+
+@app.route('/api/v1/backup/external', methods=['POST'])
+def backup_external():
+    """
+    POST /api/v1/backup/external
+    Initiates a backup to a specified external device.
+    """
+    data = request.get_json()
+    if not data or 'source' not in data or 'destination' not in data:
+        return jsonify({"error": "Missing required parameters: 'source' and 'destination'."}), 400
+    
+    source = data['source']
+    destination = data['destination']
+
+    result = run_backup_script(source, destination)
+    return jsonify(result), 202
+
+@app.route('/api/v1/backup/self', methods=['POST'])
+def backup_self():
+    """
+    POST /api/v1/backup/self
+    Initiates a backup to a new partition on the same device.
+    """
+    data = request.get_json()
+    if not data or 'destination' not in data:
+        return jsonify({"error": "Missing required parameter: 'destination'."}), 400
+
+    destination = data['destination']
+    source = "/" # Conceptual source is the root of the system
+
+    result = run_backup_script(source, destination)
+    return jsonify(result), 202
+
+@app.route('/api/v1/restore', methods=['POST'])
+def restore():
+    """
+    POST /api/v1/restore
+    Restores data from a backup.
+    """
+    data = request.get_json()
+    if not data or 'source' not in data or 'destination' not in data:
+        return jsonify({"error": "Missing required parameters: 'source' and 'destination'."}), 400
+    
+    source = data['source']
+    destination = data['destination']
+
+    result = run_restore_script(source, destination)
+    return jsonify(result), 202
+
+@app.route('/api/v1/filesystem/check', methods=['POST'])
+def filesystem_check():
+    """
+    POST /api/v1/filesystem/check
+    Runs a file system check on a specified partition.
+    """
+    data = request.get_json()
+    if not data or 'device' not in data:
+        return jsonify({"error": "Missing required parameter: 'device'."}), 400
+
+    device = data['device']
+    result = run_filesystem_check_script(device)
+    return jsonify(result), 202
+
+@app.route('/api/v1/rollback', methods=['POST'])
+def rollback():
+    """
+    POST /api/v1/rollback
+    Reverts the last major change using a system snapshot.
+    """
+    result = run_rollback_script()
+    return jsonify(result), 202
 
 @app.route('/')
 def index():
