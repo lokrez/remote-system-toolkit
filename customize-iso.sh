@@ -1,4 +1,4 @@
-#!/bin/bash
+!/bin/bash
 
 # ==============================================================================
 # Script to package the Remote System Toolkit (RST) project files into the
