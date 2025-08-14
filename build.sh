@@ -12,6 +12,7 @@ set -euo pipefail
 # --- Sourcing Libraries ---
 # All of our modular scripts will be sourced here.
 source lib/dependencies.sh
+source lib/prompts.sh
 
 # --- Global Variables ---
 # This section defines global variables for the script's state.
@@ -85,7 +86,15 @@ function run_whiptail_wizard {
     # This function will contain all the logic for our interactive wizard.
     # It will call functions from the prompts module to present menus to the user.
     echo "--- Running interactive whiptail wizard ---"
-    # Placeholder for future whiptail wizard code.
+    local main_choice
+    main_choice=$(show_main_menu)
+
+    if [[ "$main_choice" == "1" ]]; then
+        local distro_choice
+        distro_choice=$(show_distro_menu)
+        echo "User selected: $distro_choice"
+        # We can add more prompts here in the future.
+    fi
 }
 
 function main {
