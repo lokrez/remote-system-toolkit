@@ -180,44 +180,4 @@ def restore():
     Restores data from a backup.
     """
     data = request.get_json()
-    if not data or 'source' not in data or 'destination' not in data:
-        return jsonify({"error": "Missing required parameters: 'source' and 'destination'."}), 400
-    
-    source = data['source']
-    destination = data['destination']
-
-    result = run_restore_script(source, destination)
-    return jsonify(result), 202
-
-@app.route('/api/v1/filesystem/check', methods=['POST'])
-def filesystem_check():
-    """
-    POST /api/v1/filesystem/check
-    Runs a file system check on a specified partition.
-    """
-    data = request.get_json()
-    if not data or 'device' not in data:
-        return jsonify({"error": "Missing required parameter: 'device'."}), 400
-
-    device = data['device']
-    result = run_filesystem_check_script(device)
-    return jsonify(result), 202
-
-@app.route('/api/v1/rollback', methods=['POST'])
-def rollback():
-    """
-    POST /api/v1/rollback
-    Reverts the last major change using a system snapshot.
-    """
-    result = run_rollback_script()
-    return jsonify(result), 202
-
-@app.route('/')
-def index():
-    return "Remote System Toolkit Backend is running."
-
-if __name__ == '__main__':
-    # This will run the server on all network interfaces on port 5000.
-    # The web UI can then connect to this address.
-    app.run(host='0.0.0.0', port=5000)
-
+    if not data or 'source' not in data or
