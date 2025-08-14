@@ -50,3 +50,5 @@ function show_yesno_prompt {
 function get_string_input {
     local prompt="$1"
     local default_value="$2"
+        whiptail --title "User Input" --inputbox "$prompt" 10 60 "$default_value" 3>&1 1>&2 2>&3
+}
