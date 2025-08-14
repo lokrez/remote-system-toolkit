@@ -14,10 +14,10 @@ set -e
 # --- Configuration Variables ---
 # Define the source files for the project.
 PROJECT_FILES=(
-    "index.html"
     "rstool.sh"
     "backend_api.md"
     "build-iso.sh"
+    "index.html"
 )
 
 # Define the destination directory inside the ISO's working directory.
@@ -41,9 +41,10 @@ DEST_DIR="$ISO_WORK_DIR/$ISO_PROJECT_DIR"
 echo "Creating project directory: $DEST_DIR"
 sudo mkdir -p "$DEST_DIR"
 
-# --- NEW: Inject the Git version before copying the file ---
-echo "Injecting Git version into index.html..."
-./inject-version.sh
+# --- NEW: Create a temporary, version-stamped copy of index.html ---
+# The new script injects the version and saves the file to a temporary location.
+TEMP_HTML="$ISO_WORK_DIR/index.html"
+./inject-version.sh "$TEMP_HTML"
 
 # Copy each project file into the destination directory.
 for file in "${PROJECT_FILES[@]}"; do
