@@ -41,6 +41,10 @@ DEST_DIR="$ISO_WORK_DIR/$ISO_PROJECT_DIR"
 echo "Creating project directory: $DEST_DIR"
 sudo mkdir -p "$DEST_DIR"
 
+# --- NEW: Inject the Git version before copying the file ---
+echo "Injecting Git version into index.html..."
+./inject-version.sh
+
 # Copy each project file into the destination directory.
 for file in "${PROJECT_FILES[@]}"; do
     if [ -f "$file" ]; then
@@ -70,5 +74,4 @@ sudo mkdir -p "$ISO_WORK_DIR/usr/local/bin"
 sudo ln -s "$SYMLINK_TARGET" "$SYMLINK_PATH"
 
 echo "Packaging complete."
-
 

@@ -78,6 +78,7 @@
 
         <!-- Footer/Status Bar -->
         <footer class="pt-6 border-t border-gray-700 mt-6 flex justify-between items-center text-xs text-gray-400">
+            <span id="app-version"></span>
             <span>Kernel: 6.8.0-35-generic</span>
             <span>Memory: 64 GB</span>
             <span>CPU: AMD Ryzen 7 3800X</span>
@@ -115,6 +116,8 @@
         const MIRROR_LIST_URL = "http://127.0.0.1:5000/api/v1/distros";
         // URL for the storage devices API
         const STORAGE_API_URL = "http://127.0.0.1:5000/api/v1/storage";
+        // App Version
+        const appVersion = "529865c";
 
         // Hardcoded fallback data with version information for server distributions
         const FALLBACK_DISTROS = [
@@ -143,7 +146,7 @@
             {
                 "name": "Arch Linux",
                 "versions": [
-                    {"version": "Latest", "flavors": [
+                    {"name": "Latest", "flavors": [
                         {"name": "Latest ISO", "url": "https://mirrors.kernel.org/archlinux/iso/latest/archlinux-x86_64.iso"}
                     ]}
                 ]
@@ -530,9 +533,4 @@
 </html>
 ```
 
-### Git Commit
-To commit your changes to the repository, you can use the following commands:
-```bash
-git add .
-git commit -m "Updated index.html to use the /api/v1/storage endpoint for dynamic device lists"
 
