@@ -52,3 +52,4 @@ function get_string_input {
     local default_value="$2"
         whiptail --title "User Input" --inputbox "$prompt" 10 60 "$default_value" 3>&1 1>&2 2>&3
 }
+
