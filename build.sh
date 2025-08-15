@@ -14,6 +14,12 @@ set -euo pipefail
 source lib/dependencies.sh
 source lib/prompts.sh
 source lib/download.sh
+source lib/iso_management.sh
+
+# --- Trap command for cleanup on exit ---
+# This ensures that our temporary directories are cleaned up regardless of how
+# the script exits (e.g., normal exit, error, or Ctrl+C).
+trap cleanup_build_dirs EXIT
 
 # --- Global Variables ---
 # This section defines global variables for the script's state.
@@ -22,6 +28,8 @@ DISTRO=""           # e.g., 'ubuntu'
 FLAVOR=""           # e.g., 'server'
 DEVICE=""           # e.g., '/dev/sdc'
 ISO_PATH=""         # The path to the downloaded ISO file
+ISO_MOUNT="iso-mount" # The mount directory for the ISO
+ISO_WORK="iso-work"   # The temporary work directory for the ISO
 
 # --- Main Functions ---
 
@@ -87,16 +95,20 @@ function parse_cli_args {
 function handle_download_and_verify {
     echo "--- Downloading and verifying base ISO ---"
     local iso_name="ubuntu-server.iso"
-    local checksum_file="ubuntu-server.sha256"
+    local checksum_name="ubuntu-server.sha256"
 
     # In a real app, this would be dynamic and use our 'intelligent parsing' logic.
     local url_list=("https://releases.ubuntu.com/jammy/ubuntu-22.04.5-live-server-amd64.iso" "https://mirrors.example.com/ubuntu-22.04.5.iso")
+    local checksum_url_list=("https://releases.ubuntu.com/jammy/SHA256SUMS" "https://mirrors.example.com/SHA256SUMS")
 
     # Download the ISO
     download_with_fallback "${url_list[@]}" "$iso_name"
 
+    # Download the checksum file
+    download_with_fallback "${checksum_url_list[@]}" "$checksum_name"
+
     # Verify the checksum
-    verify_checksum "$iso_name" "$checksum_file"
+    verify_checksum "$iso_name" "$checksum_name"
 
     ISO_PATH="$iso_name"
     echo "ISO is ready at: $ISO_PATH"
