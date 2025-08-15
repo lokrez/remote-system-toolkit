@@ -105,13 +105,31 @@ function handle_download_and_verify {
     download_with_fallback "${url_list[@]}" "$iso_name"
 
     # Download the checksum file
-    download_with_fallback "${checksum_url[@]}" "$checksum_name"
+    download_with_fallback "${checksum_url_list[@]}" "$checksum_name"
 
     # Verify the checksum
     verify_checksum "$iso_name" "$checksum_name"
 
     ISO_PATH="$iso_name"
     echo "ISO is ready at: $ISO_PATH"
+}
+
+# --- Function to handle the creation of the custom ISO ---
+function handle_iso_creation {
+    echo "--- Building custom ISO ---"
+    # Create the ISO's working directories
+    sudo mkdir -p "$ISO_MOUNT" "$ISO_WORK"
+    
+    # Mount the base ISO and copy its files
+    mount_iso "$ISO_PATH" "$ISO_MOUNT"
+    sudo rsync -a --progress "$ISO_MOUNT"/ "$ISO_WORK" --delete
+    sudo umount "$ISO_MOUNT"
+
+    # Call the customization script
+    ./customize-iso.sh
+
+    # Create the final ISO
+    create_final_iso "$ISO_WORK" "rstoolkit-custom.iso"
 }
 
 # --- Function to run the whiptail wizard ---
@@ -145,8 +163,8 @@ function main {
         run_whiptail_wizard
     else
         echo "--- Running in CLI mode ---"
-        # In the future, this section will contain the logic for the
-        # headless build process.
+        handle_download_and_verify
+        handle_iso_creation
     fi
 
     echo "--- Build process finished successfully ---"
