@@ -105,7 +105,7 @@ function handle_download_and_verify {
     download_with_fallback "${url_list[@]}" "$iso_name"
 
     # Download the checksum file
-    download_with_fallback "${checksum_url_list[@]}" "$checksum_name"
+    download_with_fallback "${checksum_url[@]}" "$checksum_name"
 
     # Verify the checksum
     verify_checksum "$iso_name" "$checksum_name"
