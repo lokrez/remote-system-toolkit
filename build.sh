@@ -13,6 +13,7 @@ set -euo pipefail
 # All of our modular scripts will be sourced here.
 source lib/dependencies.sh
 source lib/prompts.sh
+source lib/download.sh
 
 # --- Global Variables ---
 # This section defines global variables for the script's state.
@@ -20,6 +21,7 @@ MODE="interactive"  # Can be 'interactive' or 'cli'
 DISTRO=""           # e.g., 'ubuntu'
 FLAVOR=""           # e.g., 'server'
 DEVICE=""           # e.g., '/dev/sdc'
+ISO_PATH=""         # The path to the downloaded ISO file
 
 # --- Main Functions ---
 
@@ -79,6 +81,25 @@ function parse_cli_args {
     if [[ -n "$DISTRO" || -n "$FLAVOR" || -n "$DEVICE" ]]; then
         MODE="cli"
     fi
+}
+
+# --- Function to handle ISO download and verification ---
+function handle_download_and_verify {
+    echo "--- Downloading and verifying base ISO ---"
+    local iso_name="ubuntu-server.iso"
+    local checksum_file="ubuntu-server.sha256"
+
+    # In a real app, this would be dynamic and use our 'intelligent parsing' logic.
+    local url_list=("https://releases.ubuntu.com/jammy/ubuntu-22.04.5-live-server-amd64.iso" "https://mirrors.example.com/ubuntu-22.04.5.iso")
+
+    # Download the ISO
+    download_with_fallback "${url_list[@]}" "$iso_name"
+
+    # Verify the checksum
+    verify_checksum "$iso_name" "$checksum_file"
+
+    ISO_PATH="$iso_name"
+    echo "ISO is ready at: $ISO_PATH"
 }
 
 # --- Function to run the whiptail wizard ---
